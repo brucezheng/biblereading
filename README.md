@@ -1,18 +1,22 @@
+# Finish Reading the Bible!
+
 This is single page web application to help users create bible reading plans.
 I wanted to go for the simplest possible implementation - there's really
-no server side logic at all. One benefit of this is that you can run this on
-your computer just by loading index.html.
+no server side logic at all. You can easily open index.html in your browser
+to run this.
 
-This is basically a large webform that boots the user to a confirmation page,
-which contains the bible reading plan.
+It's basically a large webform so most of the logic is form validation or 
+dynamically changing the form to show extra options in certain cases. Once
+submitted, users are taken to a screen that gives them the bible reading plan.
+
+We have two "views", which are just large container divs. In order to switch 
+views, we just hide and show them by using the `display` style. This acts as a 
+very rudimentary view system. There is of course, no refresh persistence or 
+history states as a result of this choice.
 
 In terms of JS frameworks, the only libraries used are jQuery and jQuery UI.
 
-In order to switch views, we just hide and show "views". This acts as a very
-rudimentary view system. There is of course, no refresh persistence or history
-stack as a result of this choice.
-
-Feature list
+Roadmap
 * P0 - Reading summary text
 * P0 - Generating bible reading plan view
 * P0 - "Print" button on reading plan view
