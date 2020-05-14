@@ -1,0 +1,461 @@
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Finish Reading the Bible!</title>
+  <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+  <script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+  <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+  <script src="bookVerses.js"></script>
+	<style>
+		.scriptureContainer {
+			display: flex;
+			flex-direction: row;
+			flex-wrap: wrap;
+			justify-content: space-evenly;
+			max-width: 1100px; 
+			margin: auto;
+		}
+		.scriptureQuote {
+			font-style: italic; 
+			width: 300px;
+			padding: 24px;
+		}
+		.textCentered {
+			text-align: center;
+		}
+		.scriptureQuote .citation {
+			font-style: normal;
+			font-weight: bold;
+			text-align: right;
+			padding-top: 8px;
+		}
+		.mainContentContainer {
+			max-width: 1000px; 
+			margin: auto;
+			padding: 24px;
+		}
+		.stepHeader {
+			border: 2px solid black;
+			font-size: 24pt;
+			margin-bottom: 6px;
+			margin-top: 24px;
+			text-align: center;
+			width: 36px;
+		}
+		.stepContent {
+			padding: 12px 24px;
+		}
+		.stepDescription {
+			font-style: italic;
+			margin-bottom: 8px;
+		}
+		.bookSelectionContainer {
+			display: flex;
+			flex-direction: row;
+			flex-wrap: wrap;
+			margin-left: -12px;
+			margin-bottom: 8px;
+		}
+		.bookSelection {
+			align-content: flex-start;
+			display: flex;
+			flex-direction: column;
+			flex-wrap: wrap;
+			max-height: 300px;
+		}
+		.selectionHeader {
+			font-weight: bold;
+			margin: 12px 0 4px 36px;
+			width: 100%;
+		}
+		.selectionSpacer {
+			height: 20px;
+			width: 20px;
+		}
+		.bookCheckbox {
+			margin-left: 48px;
+		}
+		.checkboxLabel {
+			display: inline-block;
+			user-select: none;
+		}
+		@media (max-width: 900px) {
+			.stepHeader {
+				margin-top: 12px;
+			}
+			.stepHeader:first-of-type {
+				margin-top: 0;
+			}
+		}
+		@media (max-width: 600px) {
+			.scriptureQuote {
+				padding: 12px;
+			}
+			.scriptureQuote:last-of-type {
+				padding: 12px 12px 0;
+			}
+			.selectionSpacer {
+				display: none;
+			}
+			.selectionHeader {
+				margin: 12px 0 4px 24px;
+			}
+			.bookSelection {
+				max-height: 400px;
+			}
+			.bookCheckbox {
+				margin-left: 24px;
+			}
+		}
+		@media (max-width: 450px) {
+			.mainContentContainer {
+				padding: 16px;
+			}
+			.stepContent {
+				padding: 12px;
+			}
+			.bookSelection {
+				max-height: unset;
+			}
+		}
+		.dateSuggestionButton {
+			margin-top: 8px;
+		}
+		.datePickerContainer {
+			display: flex;
+			flex-direction: row;
+			flex-wrap: wrap;
+		}
+		.datePicker {
+			margin-bottom: 8px;
+			margin-right: 24px;
+		}
+		.errorMessage {
+			color: red;
+			font-style: italic;
+		}
+		button {
+			font-size: 11pt;
+		}
+	</style>
+</head>
+<body>
+	<div id="mainView">
+		<div style="width: 100%; text-align: center; padding-top: 12px;">
+			<h1>
+			Finish Reading the Bible!
+			</h1>
+		</div>
+		<div style="width: 100%">
+			<div class="scriptureContainer">
+				<div class="scriptureQuote">
+					Blessed is the man <br>
+					&nbsp;&nbsp;&nbsp;&nbsp;who walks not in the counsel of the wicked, <br>
+					nor stands in the way of sinners, <br>
+					&nbsp;&nbsp;&nbsp;&nbsp;nor sits in the seat of scoffers;<br>
+					but his delight is in the law of the Lord,<br>
+					&nbsp;&nbsp;&nbsp;&nbsp;and on his law he meditates day and night.
+					<div class="citation">Psalm 1:1-2</div>
+				</div>
+				<div class="scriptureQuote">
+					For the word of God is living and active, sharper than any two-edged sword, piercing to the division of soul and of spirit, of joints and of marrow, and discerning the thoughts and intentions of the heart.
+				<div class="citation">Hebrews 4:12</div>
+				</div>
+				<div class="scriptureQuote">
+					How sweet are your words to my taste,<br>
+					&nbsp;&nbsp;&nbsp;&nbsp;sweeter than honey to my mouth!<br>
+					Through your precepts I get understanding;<br>
+					&nbsp;&nbsp;&nbsp;&nbsp;therefore I hate every false way.<br>
+					Your word is a lamp to my feet<br>
+					&nbsp;&nbsp;&nbsp;&nbsp;and a light to my path.
+					<div class="citation">Psalm 119:103-105</div>
+			</div>
+		</div>
+		</div>
+		<div style="width: 100%">
+			<div class="mainContentContainer">
+				<div class="stepHeader">1</div>
+				<div class="stepContent">
+				  <div class="stepDescription">Pick the books you are going to read</div>
+					<button id="checkAllButton" class="ui-button ui-corner-all">Check all</button>
+					<button id="uncheckAllButton" class="ui-button ui-corner-all">Uncheck all</button>
+					<div class="bookSelectionContainer">
+						<div style="display: flex; flex-direction: column;">
+							<div class="selectionHeader" selection="oldTestamentSelection">Old Testament</div>
+							<div class="bookSelection" id="oldTestamentSelection"></div>
+						</div>
+						<div class="selectionSpacer"></div>
+						<div style="display: flex; flex-direction: column">
+							<div class="selectionHeader" selection="newTestamentSelection">New Testament</div>
+							<div class="bookSelection" id="newTestamentSelection"></div>
+						</div>
+					</div>
+					<div id="numberVersesText" style="display: none;">
+						You need to read:
+						<span id="numberVersesCount" style="font-weight: bold;"></span>
+						over
+						<span id="numberChaptersCount" style="font-weight: bold;"></span>
+					</div>
+				</div>
+				<div class="stepHeader">2</div>
+				<div class="stepContent">
+			  <div class="stepDescription">Set your starting and ending date</div>
+				  <div class="datePickerContainer">
+						<div class="datePicker">Starting date: <input id="startingDate" type="date"></div>
+						<div class="datePicker">Ending date: <input id="endingDate" type="date"></div>
+					</div>
+					<div id="dateErrorMessage" style="display: none;" class="errorMessage"></div>
+					<div id="planDurationText" style="display: none;">
+						Your plan will take: <span id="planDurationDays" style="font-weight: bold;"></span>
+					</div>
+					<button id="suggestStartingDateButton"
+									style="display: none;"
+									class="dateSuggestionButton ui-button ui-corner-all">
+						Suggest a starting date
+					</button>
+					<button id="suggestEndingDateButton"
+									style="display: none;"
+									class="dateSuggestionButton ui-button ui-corner-all">
+						Suggest an ending date
+					</button>
+				</div>
+				<div class="stepHeader">3</div>
+				<div class="stepContent">
+			  <div class="stepDescription">Select extra options</div>
+				<input type="checkbox">Psalms every day</input>
+				</div>
+				<div class="stepHeader">4</div>
+				<div class="stepContent">
+				<button id="submitButton" class="ui-button ui-corner-all">Get your plan</button>
+				</div>
+			</div>
+		</div>
+	</div>
+	<div id="readingPlanView" style="display: none;">
+		Reading plan!
+		<button id="modifyButton" class="ui-button ui-corner-all">Modify plan</button>
+		<button id="printButton" class="ui-button ui-corner-all">Print</button>
+	</div>
+	<script>
+		const today = getDateInputVal(new Date())
+  	const suggestedVersesPerDay = (totalNumberVerses / 365.0);
+
+		let checkedBooks = new Set();
+		let numberVerses = 0;
+		let numberChapters = 0;
+		let startingDate = new Date(today);;
+		let endingDate = null;
+
+		oldTestamentBooks.forEach((name) => $('#oldTestamentSelection').append(createBookCheckbox(name)));
+		newTestamentBooks.forEach((name) => $('#newTestamentSelection').append(createBookCheckbox(name)));
+ 		$('.bookSelection').each(function() {
+			const lastChild = $(this).children().last();
+			const newWidth = lastChild.position().left - $(this).position().left + lastChild.outerWidth(true);
+			if (newWidth > $(this).outerWidth()) {
+				$(this).width(newWidth);
+			}
+    })
+
+		$('#startingDate').val(today);
+
+ 		$('#submitButton').button({
+		  disabled: true
+		});
+
+		function createElement(tag, classList=[]) {
+			const element = document.createElement(tag);
+			for (const className of classList) {
+				element.classList.add(className);
+			}
+			return element;
+		}
+
+		function createBookCheckbox(labelText) {
+			const checkbox = createElement('div', ['bookCheckbox']);
+			const label = createElement('div', ['checkboxLabel']);
+			const input = createElement('input');
+			input.type = 'checkbox';
+			label.innerHTML = labelText;
+			checkbox.append(input);
+			checkbox.append(label);
+			return checkbox;
+		}
+
+		function toggleCheckbox(checkbox, state=null) {
+			checkbox.prop('checked', state !== null ? state : !checkbox.prop('checked'));
+		}
+
+		function toggleAllCheckboxes(state=null) {
+  		$('.bookCheckbox input').each(function() {
+  			toggleCheckbox($(this), state);
+  		});
+		}
+
+		function onCheckboxToggled() {
+			checkedBooks.clear();
+  		$('.bookCheckbox input').each(function() {
+  			if ($(this).prop('checked')) {
+  				const bookName = $(this).parent().find('.checkboxLabel').html();
+  				checkedBooks.add(bookName);
+  			}
+  		});
+  		updateNumberVersesText();
+  		updateSubmitButtonEnabled();
+  		updateDateSuggestionButtons();
+		}
+
+		function updateNumberVersesText() {
+			numberVerses = getNumberVerses([...checkedBooks]);
+			numberChapters = getNumberChapters([...checkedBooks]);
+			if (numberVerses === 0) {
+				$('#numberVersesText').css('display', 'none');
+				return;
+			}
+			$('#numberChaptersCount').html(`${numberChapters} ${numberChapters > 1 ? 'chapters' : 'chapter'}`);
+			$('#numberVersesCount').html(`${numberVerses} verses`);
+			$('#numberVersesText').css('display', 'block');
+		}
+
+		function getDaysDate(days) {
+			return new Date(days * 24 * 60 * 60 * 1000);
+		}
+
+		function getDateDays(date) {
+ 			return date / 1000 / 60 / 60 / 24;
+		}
+
+		function getDateInputVal(date) {
+			const day = ("0" + date.getDate()).slice(-2);
+			const month = ("0" + (date.getMonth() + 1)).slice(-2);
+			return date.getFullYear()+"-"+(month)+"-"+(day) ;
+		}
+
+		function checkDateValidity() {
+			updateSubmitButtonEnabled();
+			if (!startingDate || !endingDate) {
+				return hideDateErrorMessage();
+			}
+			if (endingDate < startingDate) {
+				return setDateErrorMessage('Ending date cannot be before starting date.');
+			}
+			return hideDateErrorMessage();
+		}
+
+		function hideDateErrorMessage() {
+			$('#dateErrorMessage').css('display', 'none');
+		}
+
+		function setDateErrorMessage(errorMessage) {
+			$('#dateErrorMessage').html(errorMessage);
+			$('#dateErrorMessage').css('display', 'block');
+		}
+
+		function updatePlanDurationText() {
+			if (!startingDate || !endingDate || endingDate < startingDate) {
+				$('#planDurationText').css('display', 'none');
+				return;
+			}
+			const planDuration = getDateDays(new Date(endingDate - startingDate)) + 1;
+			$('#planDurationDays').html(`${planDuration} ${planDuration > 1 ? 'days' : 'day'}`);
+			$('#planDurationText').css('display', 'block');
+  	}
+
+  	function getSuggestedPlanDuration() {
+			return Math.round(numberVerses / suggestedVersesPerDay);
+  	}
+
+  	function getSuggestedStartingDate() {
+			if (!endingDate) {
+				return null;
+			}
+			const suggestedStartingDate = new Date(startingDate);
+			return new Date(
+					suggestedStartingDate.setDate(
+								suggestedStartingDate.getDate() - getSuggestedPlanDuration()));
+  	}
+
+  	function getSuggestedEndingDate() {
+			if (!startingDate) {
+				return null;
+			}
+			const suggestedEndingDate = new Date(startingDate);
+			return new Date(
+					suggestedEndingDate.setDate(
+								suggestedEndingDate.getDate() + getSuggestedPlanDuration()));
+  	}
+
+		function updateDateSuggestionButtons() {
+			if (numberChapters === 0 || (!startingDate && !endingDate)) {
+				$('#suggestStartingDateButton').css('display', 'none');
+				$('#suggestEndingDateButton').css('display', 'none');
+			} else if (!startingDate && endingDate && getSuggestedStartingDate() >= new Date(today)) {
+				$('#suggestStartingDateButton').css('display', 'block');
+				$('#suggestEndingDateButton').css('display', 'none');
+			} else {
+				$('#suggestStartingDateButton').css('display', 'none');
+				$('#suggestEndingDateButton').css('display', 'block');
+			}
+		}
+
+		function updateSubmitButtonEnabled() {
+			const hasNoCheckedBooks = checkedBooks.size === 0;
+			const hasInvalidDates = !startingDate || !endingDate || endingDate < startingDate;
+		 	$('#submitButton').button('option', 'disabled', hasNoCheckedBooks || hasInvalidDates);
+		}
+
+		$('.checkboxLabel').click(function(event) {
+			toggleCheckbox($(this).parent().find('input'));
+			onCheckboxToggled();
+    });
+    $('.bookCheckbox input').change(function(event) {
+			onCheckboxToggled();
+    });
+    $('#checkAllButton').click(function(event) {
+    	toggleAllCheckboxes(true);
+			onCheckboxToggled();
+    });
+    $('#uncheckAllButton').click(function(event) {
+    	toggleAllCheckboxes(false);
+			onCheckboxToggled();
+    });
+
+    $('#startingDate').change(function(event) {
+    	startingDate = $(this).val() ? new Date($(this).val()) : null;
+    	updateDateSuggestionButtons();
+  		checkDateValidity();
+  		updatePlanDurationText();
+    });
+    $('#endingDate').change(function(event) {
+    	endingDate = $(this).val() ? new Date($(this).val()) : null;
+    	updateDateSuggestionButtons();
+  		checkDateValidity();
+  		updatePlanDurationText();
+    });
+    $('#suggestStartingDateButton').click(function(event) {
+    	const newStartingDate = getDateInputVal(getSuggestedStartingDate());
+    	startingDate = new Date(newStartingDate); // Need to truncate the value here.
+    	$('#startingDate').val(newStartingDate);
+  		updatePlanDurationText();
+    });
+    $('#suggestEndingDateButton').click(function(event) {
+    	const newEndingDate = getDateInputVal(getSuggestedEndingDate());
+    	endingDate = new Date(newEndingDate); // Need to truncate the value here.
+    	$('#endingDate').val(newEndingDate);
+  		updatePlanDurationText();
+    });
+
+ 		$('#submitButton').click(function(event) {
+ 			$('#readingPlanView').css('display', 'block');
+ 			$('#mainView').css('display', 'none');
+ 		});
+
+ 		$('#modifyButton').click(function(event) {
+ 			$('#mainView').css('display', 'block');
+ 			$('#readingPlanView').css('display', 'none');
+ 			$([document.documentElement, document.body]).animate({
+        scrollTop: $(".stepHeader").offset().top - 24
+  		}, 150, 'linear');
+ 		});
+	</script>
+</body>
+</html>
