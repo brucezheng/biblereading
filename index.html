@@ -243,8 +243,9 @@
     let checkedBooks = new Set();
     let numberVerses = 0;
     let numberChapters = 0;
-    let startingDate = new Date(today);;
+    let startingDate = new Date(today);
     let endingDate = null;
+    let bibleReadingPlan = [];
 
     oldTestamentBooks.forEach((name) => $('#oldTestamentSelection').append(createBookCheckbox(name)));
     newTestamentBooks.forEach((name) => $('#newTestamentSelection').append(createBookCheckbox(name)));
@@ -305,13 +306,14 @@
     }
 
     function updateNumberVersesText() {
-      numberVerses = getNumberVerses([...checkedBooks]);
-      numberChapters = getNumberChapters([...checkedBooks]);
+      numberVerses = getNumberVerses(checkedBooks);
+      numberChapters = getNumberChapters(checkedBooks);
       if (numberVerses === 0) {
         $('#numberVersesText').css('display', 'none');
         return;
       }
-      $('#numberChaptersCount').html(`${numberChapters} ${numberChapters > 1 ? 'chapters' : 'chapter'}`);
+      $('#numberChaptersCount').html(
+          `${numberChapters} ${numberChapters > 1 ? 'chapters' : 'chapter'}`);
       $('#numberVersesCount').html(`${numberVerses} verses`);
       $('#numberVersesText').css('display', 'block');
     }
@@ -341,6 +343,18 @@
       return hideDateErrorMessage();
     }
 
+    function areDatesValid() {
+      return startingDate && endingDate && endingDate >= startingDate;
+    }
+
+    function updateBibleReadingPlan() {
+      if (!areDatesValid() || checkedBooks.size === 0) {
+        bibleReadingPlan = [];
+        return;
+      }
+      bibleReadingPlan = getBibleReadingPlan(startingDate, endingDate, checkedBooks);
+    }
+
     function hideDateErrorMessage() {
       $('#dateErrorMessage').css('display', 'none');
     }
@@ -351,7 +365,7 @@
     }
 
     function updatePlanDurationText() {
-      if (!startingDate || !endingDate || endingDate < startingDate) {
+      if (!areDatesValid()) {
         $('#planDurationText').css('display', 'none');
         return;
       }
@@ -398,9 +412,8 @@
     }
 
     function updateSubmitButtonEnabled() {
-      const hasNoCheckedBooks = checkedBooks.size === 0;
-      const hasInvalidDates = !startingDate || !endingDate || endingDate < startingDate;
-       $('#submitButton').button('option', 'disabled', hasNoCheckedBooks || hasInvalidDates);
+      updateBibleReadingPlan();
+      $('#submitButton').button('option', 'disabled', bibleReadingPlan.length === 0);
     }
 
     $('.checkboxLabel').click(function(event) {
@@ -435,12 +448,14 @@
       const newStartingDate = getDateInputVal(getSuggestedStartingDate());
       startingDate = new Date(newStartingDate); // Need to truncate the value here.
       $('#startingDate').val(newStartingDate);
+      checkDateValidity();
       updatePlanDurationText();
     });
     $('#suggestEndingDateButton').click(function(event) {
       const newEndingDate = getDateInputVal(getSuggestedEndingDate());
       endingDate = new Date(newEndingDate); // Need to truncate the value here.
       $('#endingDate').val(newEndingDate);
+      checkDateValidity();
       updatePlanDurationText();
     });
 

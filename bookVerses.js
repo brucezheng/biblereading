@@ -78,29 +78,30 @@ const bookVerseMap =
       ]));
 
 const bookNames = bookVerses.map((bookInfo => bookInfo[0]));
+const allBooks = new Set(bookNames);
 const newTestamentStart = bookNames.indexOf('Matthew');
 const oldTestamentBooks = bookNames.slice(0, newTestamentStart);
 const newTestamentBooks = bookNames.slice(newTestamentStart);
 
 const add = (a, b) => a + b;
 
-function getNumberVerses(bookNames) {
+function getNumberVerses(selectedBooks) {
   return bookVerses
-      .filter((bookInfo) => bookNames.includes(bookInfo[0]))
+      .filter((bookInfo) => selectedBooks.has(bookInfo[0]))
       .map((bookInfo) => bookInfo[2])
       .map((chapterVerses) => chapterVerses.reduce(add, 0))
       .reduce(add, 0);
 }
 
-function getNumberChapters(bookNames) {
+function getNumberChapters(selectedBooks) {
   return bookVerses
-      .filter((bookInfo) => bookNames.includes(bookInfo[0]))
+      .filter((bookInfo) => selectedBooks.has(bookInfo[0]))
       .map((bookInfo) => bookInfo[1])
       .reduce(add, 0);
 }
 
-const totalNumberVerses = getNumberVerses(bookNames);
-const totalNumberChapters = getNumberChapters(bookNames);
+const totalNumberVerses = getNumberVerses(allBooks);
+const totalNumberChapters = getNumberChapters(allBooks);
 
 class ScriptureSection {
   constructor(
@@ -125,6 +126,10 @@ class ScriptureSection {
 
   getNumberVerses() {
     return this.numberVerses;
+  }
+
+  getNumberChapters() {
+  	return this.endingChapter - this.startingChapter + 1;
   }
 
   canAppend(nextSection) {
@@ -185,8 +190,11 @@ class ScriptureSection {
 }
 
 class ScriptureSectionList {
-  constructor() {
+  constructor(sections) {
     this.sectionList = [];
+    for (const section of sections) {
+    	this.add(section);
+    }
   }
 
   // This function won't WAI if you don't add things in ascending order.
@@ -198,8 +206,24 @@ class ScriptureSectionList {
         return this;
       }
     }
-    this.sectionList.push(newSection);
+    this.sectionList.push(
+	    	new ScriptureSection(
+	    		newSection.book,
+	    		newSection.startingChapter,
+	    		newSection.startingVerse,
+	    		newSection.endingChapter,
+	    		newSection.endingVerse));
     return this;
+  }
+
+  getNumberVerses() {
+  	return this.sectionList.reduce(
+  			(sum, nextSection) => sum + nextSection.getNumberVerses(), 0);
+  }
+
+  getNumberChapters() {
+  	return this.sectionList.reduce(
+  			(sum, nextSection) => sum + nextSection.getNumberChapters(), 0);
   }
 
   toString() {
@@ -271,19 +295,103 @@ function parseScriptureSection(sectionString) {
     /* endingVerse= */ startingVerse);
 }
 
+function getScriptureSectionsFromBookChapter(book, chapter, numVerses) {
+	if (book === 'Psalms' && chapter === 119) {
+		return [...psalm119AcrosticSections];
+	}
+  return [
+	  new ScriptureSection(
+	      book, 
+	      /* startingChapter= */ chapter, 
+	      /* startingVerse= */ 1, 
+	      /* endingChapter= */ chapter, 
+	      /* endingVerse= */ numVerses),
+  ];
+}
+
 function getScriptureSectionsFromBookInfo(bookInfo) {
-  return bookInfo[2].map(
-      (numVerses, index) => 
-          new ScriptureSection(
-              bookInfo[0], 
-              /* startingChapter= */ index + 1, 
-              /* startingVerse= */ 1, 
-              /* endingChapter= */ index + 1, 
-              /* endingVerse= */ numVerses));
+  return bookInfo[2]
+  		.map((numVerses, index) => 
+      		     getScriptureSectionsFromBookChapter(
+      		         bookInfo[0], /* chapter= */ index + 1, numVerses))
+		  .reduce(
+		  	(sections, newSections) => sections.concat(newSections), []);
 }
 
 function getScriptureSections(selectedBooks) {
   return bookVerses
              .filter(bookInfo => selectedBooks.has(bookInfo[0]))
-             .map(getScriptureSectionsFromBookInfo);
+             .map(getScriptureSectionsFromBookInfo)
+					   .reduce(
+					  	   (sections, newSections) => sections.concat(newSections), []);
+}
+
+function getScriptureSegments(selectedBooks, numSegments) {
+	const sections = getScriptureSections(selectedBooks);
+	if (sections.length < numSegments) {
+		// TODO: Make sparse segments.
+		return sections.map(section => new ScriptureSectionList([section]));
+	}
+	const totalVerses = getNumberVerses(selectedBooks);
+	const totalSections = sections.length;
+	const avgVersesPerSegment = totalVerses / numSegments;
+	let cumulativeVerses = 0;
+	let cumulativeSections = 0;
+	let segments = [];
+	let segmentsArr = [];
+	const isCloserTo = (a, b, c) => Math.abs(c - a) <= Math.abs(c - b);
+	for (let i = 0; i < numSegments; ++i) {
+		let currentVerses = 0;
+		const remainingVerses = totalVerses - cumulativeVerses;
+		const remainingSegments = numSegments - i;
+		const verseSoftLimit = remainingVerses / remainingSegments;
+		const maxSections = totalSections - numSegments + i + 1; 
+		let currentSegment = [];
+		while (
+			  sections[0] &&
+				((cumulativeSections < maxSections &&
+						 isCloserTo(
+						     currentVerses + sections[0].getNumberVerses(),
+						     currentVerses,
+						     verseSoftLimit)) ||
+			       currentSegment.length === 0)) {
+			currentSegment.push(sections[0]);
+		  const sectionNumberVerses = sections[0].getNumberVerses();
+			currentVerses += sectionNumberVerses;
+			cumulativeVerses += sectionNumberVerses;
+			cumulativeSections += 1;
+			sections.shift();
+		}
+		segments.push(new ScriptureSectionList(currentSegment));
+	}
+	return segments;
+}
+
+Date.prototype.addDay = function(days) {
+    const date = new Date(this.valueOf());
+    date.setDate(date.getDate() + 1);
+    return date;
+}
+
+function getDateRange(startingDate, endingDate) {
+  const dateRange = [];
+  for (let d = startingDate; d <= endingDate; d = d.addDay()) {
+  	dateRange.push(new Date(d));
+  }
+  return dateRange;
+}
+
+function getBibleReadingPlan(startingDate, endingDate, selectedBooks) {
+	const dateRange = getDateRange(startingDate, endingDate);
+	const scriptureSegments =
+			getScriptureSegments(selectedBooks, dateRange.length);
+	return dateRange.map((date, index) => {
+		sectionList = scriptureSegments[index];
+		return {
+			date,
+			reading: sectionList.toString(),
+			numVerses: sectionList.getNumberVerses(),
+			numChapters: sectionList.getNumberChapters(),
+		};
+	});
 }
