@@ -68,6 +68,15 @@ const bookVerses = [
 	['Revelation', 22, [20, 29, 22, 11, 14, 17, 17, 13, 21, 11, 19, 17, 18, 20, 8, 21, 18, 24, 21, 15, 27, 21]],
 ];
 
+/** bookVerseMap.get('Jude').get(1) = 25 */
+const bookVerseMap =
+	new Map(
+		bookVerses.map(
+			bookInfo => [
+				bookInfo[0], 
+				new Map(bookInfo[2].map((numVerse, index) => [index + 1, numVerse])),
+			]));
+
 const bookNames = bookVerses.map((bookInfo => bookInfo[0]));
 const newTestamentStart = bookNames.indexOf('Matthew');
 const oldTestamentBooks = bookNames.slice(0, newTestamentStart);
@@ -92,3 +101,190 @@ function getNumberChapters(bookNames) {
 
 const totalNumberVerses = getNumberVerses(bookNames);
 const totalNumberChapters = getNumberChapters(bookNames);
+
+class ScriptureSection {
+	constructor(
+		book, startingChapter, startingVerse, endingChapter, endingVerse) {
+		this.book = book;
+		const verseMap = bookVerseMap.get(this.book);
+		this.startingChapter = startingChapter;
+		this.endingChapter = endingChapter || this.startingChapter;
+		this.startingVerse = startingVerse || 1;
+		this.endingVerse = endingVerse || verseMap.get(this.endingChapter);
+		if (this.startingChapter === this.endingChapter) {
+			this.numberVerses = this.endingVerse - this.startingVerse + 1;
+		} else {
+			this.numberVerses = 
+					verseMap.get(this.startingChapter) - this.startingVerse + 1;
+			for (let i = this.startingChapter + 1; i < this.endingChapter; ++i) {
+				this.numberVerses += verseMap.get(i);
+			}
+			this.numberVerses += this.endingVerse;
+		}
+	}
+
+	getNumberVerses() {
+		return this.numberVerses;
+	}
+
+	canAppend(nextSection) {
+		if (this.book != nextSection.book) {
+			return false;
+		}
+		if (this.endingChapter + 1 === nextSection.startingChapter) {
+			return true;
+		}
+		if (this.endingChapter === nextSection.startingChapter &&
+						this.endingVerse + 1 === nextSection.startingVerse) {
+			return true;
+		}
+		return false;
+
+	}
+
+	append(nextSection) {
+		if (this.canAppend(nextSection)) {
+			this.endingChapter = nextSection.endingChapter;
+			this.endingVerse = nextSection.endingVerse;
+			this.numberVerses += nextSection.numberVerses;
+		} else {
+			console.log(
+				'Cannot add', this.toString(), 'and', nextSection.toString());
+		}
+		return this;
+	}
+
+	toString() {
+		if (this.book === 'Psalms' && 
+						this.startingChapter === this.endingChapter) {
+			return `Psalm ${this.getChapterVerseString_()}`
+		}
+		return `${this.book} ${this.getChapterVerseString_()}`
+	}
+
+	getChapterVerseString_() {
+		if (this.startingChapter === this.endingChapter &&
+						this.startingVerse === this.endingVerse) {
+			return `${this.startingChapter}:${this.startingVerse}`;
+		}
+
+		const hideVerses =
+				this.startingVerse === 1 &&
+						this.endingVerse === 
+								bookVerseMap.get(this.book).get(this.endingChapter);
+		if (this.startingChapter === this.endingChapter) {
+			return hideVerses ?
+					`${this.startingChapter}` :
+					`${this.startingChapter}` +
+							`:${this.startingVerse}-${this.endingVerse}`;
+		}
+		return hideVerses ?
+			 	`${this.startingChapter}-${this.endingChapter}` :
+				`${this.startingChapter}:${this.startingVerse}` +
+						`-${this.endingChapter}:${this.endingVerse}`;
+	}
+}
+
+class ScriptureSectionList {
+	constructor() {
+		this.sectionList = [];
+	}
+
+	// This function won't WAI if you don't add things in ascending order.
+	// We also won't merge overlapping sections.
+	add(newSection) {
+		for (const section of this.sectionList) {
+			if (section.canAppend(newSection)) {
+				section.append(newSection);
+				return this;
+			}
+		}
+		this.sectionList.push(newSection);
+		return this;
+	}
+
+	toString() {
+		if (this.sectionList.length === 0) {
+			return '';
+		}
+		return this.sectionList.map(section => section.toString()).join(', ');
+	}
+}
+
+const psalm119AcrosticSections = 
+	[...Array(22).keys()].map(k => 
+			new ScriptureSection(
+					'Psalms', 
+					/* startingChapter= */ 119, 
+					/* startingVerse= */ k * 8 + 1, 
+					/* endingChapter= */ 119, 
+					/* endingVerse= */ k * 8 + 8));
+
+const scriptureSectionRegex =
+		new RegExp('([A-Za-z]+) ([0-9]+)(:([0-9])+)?(-([0-9]+)(:([0-9])+)?)?');
+const BOOK_REGEX_GROUP = 1;
+const STARTING_CHAPTER_REGEX_GROUP = 2;
+const STARTING_VERSE_REGEX_GROUP = 4;
+const ENDING_CHAPTER_OR_VERSE_REGEX_GROUP = 6;
+const ENDING_VERSE_REGEX_GROUP = 8;
+function parseScriptureSection(sectionString) {
+	const matchResult = sectionString.match(scriptureSectionRegex);
+	// Malformed
+	if (!matchResult) {
+		console.log('Cannot parse', sectionString, 'into ScriptureSection')
+		return null;
+	}
+	const book = matchResult[BOOK_REGEX_GROUP];
+	const startingChapter = Number(matchResult[STARTING_CHAPTER_REGEX_GROUP]);
+	const startingVerse = Number(matchResult[STARTING_VERSE_REGEX_GROUP]);
+	const endingChapterOrVerse =
+			Number(matchResult[ENDING_CHAPTER_OR_VERSE_REGEX_GROUP]);
+	const endingVerse = Number(matchResult[ENDING_VERSE_REGEX_GROUP]);
+	// Genesis 1:1-2:2
+	if (endingVerse) {
+		return new ScriptureSection(
+			book, startingChapter, startingVerse, endingChapterOrVerse, endingVerse);
+	}
+	if (endingChapterOrVerse) {
+		// Genesis 1:1-2
+		if (startingVerse) {
+			return new ScriptureSection(
+				book,
+				startingChapter,
+				startingVerse,
+				/* endingChapter= */ null,
+				endingChapterOrVerse);
+		}
+		// Genesis 1-2
+		return new ScriptureSection(
+			book,
+			startingChapter,
+			/* startingVerse= */ null,
+			endingChapterOrVerse,
+			/* endingVerse= */ null);
+	}
+	// Genesis 1:1
+	return new ScriptureSection(
+		book,
+		startingChapter,
+		startingVerse,
+		/* endingChapter= */ startingChapter,
+		/* endingVerse= */ startingVerse);
+}
+
+function getScriptureSectionsFromBookInfo(bookInfo) {
+	return bookInfo[2].map(
+			(numVerses, index) => 
+					new ScriptureSection(
+							bookInfo[0], 
+							/* startingChapter= */ index + 1, 
+							/* startingVerse= */ 1, 
+							/* endingChapter= */ index + 1, 
+							/* endingVerse= */ numVerses));
+}
+
+function getScriptureSections(selectedBooks) {
+	return bookVerses
+				     .filter(bookInfo => selectedBooks.has(bookInfo[0]))
+				     .map(getScriptureSectionsFromBookInfo);
+}
