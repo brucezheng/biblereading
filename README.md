@@ -23,6 +23,7 @@ Roadmap
 * P0 - "Read psalms in parallel" extra option
 * P0 - "Read psalms daily" extra option
 * P1 - Refactor code to be a little more sane
+* P1 - Add 'unit testing' framework
 * P1 - Adjust fonts to be better lookin'
 * P1 - Links to biblehub or esv.org in reading plan
 * P1 - Checkboxes to select/unselect all OT/NT
