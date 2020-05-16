@@ -139,7 +139,6 @@ class ScriptureSection {
       return true;
     }
     return false;
-
   }
 
   append(nextSection) {

@@ -444,18 +444,18 @@
       updatePlanDurationText();
     });
 
-     $('#submitButton').click(function(event) {
-       $('#readingPlanView').css('display', 'block');
-       $('#mainView').css('display', 'none');
-     });
+    $('#submitButton').click(function(event) {
+      $('#readingPlanView').css('display', 'block');
+      $('#mainView').css('display', 'none');
+    });
 
-     $('#modifyButton').click(function(event) {
-       $('#mainView').css('display', 'block');
-       $('#readingPlanView').css('display', 'none');
-       $([document.documentElement, document.body]).animate({
+    $('#modifyButton').click(function(event) {
+      $('#mainView').css('display', 'block');
+      $('#readingPlanView').css('display', 'none');
+      $([document.documentElement, document.body]).animate({
         scrollTop: $(".stepHeader").offset().top - 24
       }, 150, 'linear');
-     });
+    });
   </script>
 </body>
 </html>
