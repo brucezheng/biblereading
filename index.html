@@ -6,6 +6,7 @@
   <script src="https://code.jquery.com/jquery-1.12.4.js"></script>
   <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
   <script src="bookVerses.js"></script>
+  <script src="monthUtils.js"></script>
   <style>
     .scriptureContainer {
       display: flex;
@@ -416,55 +417,6 @@
       const day = ("0" + date.getDate()).slice(-2);
       const month = ("0" + (date.getMonth() + 1)).slice(-2);
       return date.getFullYear()+"-"+(month)+"-"+(day) ;
-    }
-
-    const monthNames = [
-      'January',
-      'February',
-      'March',
-      'April',
-      'May',
-      'June',
-      'July',
-      'August',
-      'September',
-      'October',
-      'November', 
-      'December',
-    ]; 
-    const monthAbbreviations = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-    function getMonthDayString(date) {
-      let dateSuffix = 'th';
-      switch (date.getDate()) {
-        case 1:
-        case 21:
-        case 31:
-          dateSuffix = 'st';
-          break;
-        case 2:
-        case 22:
-          dateSuffix = 'nd';
-          break;
-        case 3:
-        case 23:
-          dateSuffix = 'rd';
-          break;
-      }
-      return `${monthAbbreviations[date.getMonth()]}` + 
-                 ` ${date.getDate()}${dateSuffix}`;
     }
 
     function checkDateValidity() {
