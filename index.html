@@ -137,6 +137,62 @@
     button {
       font-size: 11pt;
     }
+    .planHeader {
+      border: 2px solid black;
+      font-size: 24pt;
+      margin-bottom: 6px;
+      margin-top: 24px;
+      padding: 0 4px;
+      text-align: center;
+      width: 72px;
+    }
+    .bibleReadingPlanContainer{
+      display: flex;
+      flex-direction: row;
+      justify-content: center;
+      width: 100%;
+    }
+    .bibleReadingPlanColumn{
+      display: flex;
+      flex-direction: column;
+      padding: 24px;
+    }
+    .readingPlanYearHeader {
+      font-size: 28pt;
+      font-weight: bold;
+      margin: 0 0 4px 12px;
+    }
+    .readingPlanMonth {
+      display: flex;
+      flex-direction: column;
+      margin: 12px;
+    }
+    .readingPlanMonthHeader {
+      font-size: 16pt;
+      font-weight: bold;
+      text-decoration: underline;
+      margin-bottom: 8px;
+    }
+    .readingPlanEntry {
+      display: flex;
+      flex-direction: row;
+      font-size: 12pt;
+      margin-bottom: 2px;
+      width: 225px;
+    }
+    .readingPlanEntryDate {
+      font-weight: bold;
+      margin-right: 3px;
+    }
+    .planActionButtonContainer {
+      display: flex;
+      flex-direction: row;
+      justify-content: center;
+      margin-top: 16px;
+    }
+    .planActionButtonContainer button {
+      margin: 24px;
+    }
   </style>
 </head>
 <body>
@@ -232,11 +288,18 @@
     </div>
   </div>
   <div id="readingPlanView" style="display: none;">
-    Reading plan!
-    <button id="modifyButton" class="ui-button ui-corner-all">Modify plan</button>
-    <button id="printButton" class="ui-button ui-corner-all">Print</button>
+    <div style="width: 100%; text-align: center; padding-top: 12px;">
+      <span class="planHeader">Reading Plan</span>
+    </div>
+    <div class="planActionButtonContainer">
+      <button id="modifyButton" class="ui-button ui-corner-all">Modify plan</button>
+      <button id="printButton" class="ui-button ui-corner-all">Print</button>
+    </div>
+    <div class="bibleReadingPlanContainer"></div>
   </div>
   <script>
+    const READING_PLAN_COLUMN_SIZE = 300;
+
     const today = getDateInputVal(new Date())
     const suggestedVersesPerDay = (totalNumberVerses / 365.0);
 
@@ -282,6 +345,28 @@
       return checkbox;
     }
 
+    function createReadingPlanEntry(entry) {
+      const result = createElement('div', ['readingPlanEntry']);
+      const monthDay = createElement('div', ['readingPlanEntryDate']);
+      monthDay.innerHTML = getMonthDayString(entry.date) + ': ';
+      const reading = createElement('div');
+      reading.innerHTML = entry.reading;
+      result.append(monthDay);
+      result.append(reading);
+      return result;
+    }
+
+    function createReadingPlanMonth(monthPlan) {
+      const result = createElement('div', ['readingPlanMonth']);
+      const monthHeader = createElement('div', ['readingPlanMonthHeader']);
+      monthHeader.innerHTML = monthNames[monthPlan.month];
+      result.append(monthHeader);
+      for (const entry of monthPlan.dailyReadings) {
+        result.append(createReadingPlanEntry(entry));
+      }
+      return result;
+    }
+
     function toggleCheckbox(checkbox, state=null) {
       checkbox.prop('checked', state !== null ? state : !checkbox.prop('checked'));
     }
@@ -290,6 +375,7 @@
       $('.bookCheckbox input').each(function() {
         toggleCheckbox($(this), state);
       });
+      onCheckboxToggled();
     }
 
     function onCheckboxToggled() {
@@ -332,6 +418,55 @@
       return date.getFullYear()+"-"+(month)+"-"+(day) ;
     }
 
+    const monthNames = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November', 
+      'December',
+    ]; 
+    const monthAbbreviations = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    function getMonthDayString(date) {
+      let dateSuffix = 'th';
+      switch (date.getDate()) {
+        case 1:
+        case 21:
+        case 31:
+          dateSuffix = 'st';
+          break;
+        case 2:
+        case 22:
+          dateSuffix = 'nd';
+          break;
+        case 3:
+        case 23:
+          dateSuffix = 'rd';
+          break;
+      }
+      return `${monthAbbreviations[date.getMonth()]}` + 
+                 ` ${date.getDate()}${dateSuffix}`;
+    }
+
     function checkDateValidity() {
       updateSubmitButtonEnabled();
       if (!startingDate || !endingDate) {
@@ -352,7 +487,8 @@
         bibleReadingPlan = [];
         return;
       }
-      bibleReadingPlan = getBibleReadingPlan(startingDate, endingDate, checkedBooks);
+      bibleReadingPlan =
+          getBibleReadingPlan(startingDate, endingDate, checkedBooks);
     }
 
     function hideDateErrorMessage() {
@@ -370,12 +506,20 @@
         return;
       }
       const planDuration = getDateDays(new Date(endingDate - startingDate)) + 1;
-      $('#planDurationDays').html(`${planDuration} ${planDuration > 1 ? 'days' : 'day'}`);
+      $('#planDurationDays').html(
+          `${planDuration} ${planDuration > 1 ? 'days' : 'day'}`);
       $('#planDurationText').css('display', 'block');
     }
 
     function getSuggestedPlanDuration() {
       return Math.round(numberVerses / suggestedVersesPerDay);
+    }
+
+    function getSuggestedDate(buttonId) {
+      if (buttonId === '#suggestStartingDateButton') {
+        return getSuggestedStartingDate();
+      }
+      return getSuggestedEndingDate();
     }
 
     function getSuggestedStartingDate() {
@@ -402,7 +546,9 @@
       if (numberChapters === 0 || (!startingDate && !endingDate)) {
         $('#suggestStartingDateButton').css('display', 'none');
         $('#suggestEndingDateButton').css('display', 'none');
-      } else if (!startingDate && endingDate && getSuggestedStartingDate() >= new Date(today)) {
+      } else if (
+          !startingDate && endingDate && 
+              getSuggestedStartingDate() >= new Date(today)) {
         $('#suggestStartingDateButton').css('display', 'block');
         $('#suggestEndingDateButton').css('display', 'none');
       } else {
@@ -413,7 +559,111 @@
 
     function updateSubmitButtonEnabled() {
       updateBibleReadingPlan();
-      $('#submitButton').button('option', 'disabled', bibleReadingPlan.length === 0);
+      $('#submitButton').button(
+          'option', 'disabled', bibleReadingPlan.length === 0);
+    }
+
+    function populatePlanView() {
+      $('.bibleReadingPlanContainer').empty();
+
+      const segmentedPlan = [];
+      let currentYearPlan;
+      let currentMonthPlan;
+      let totalNumberMonths = 0;
+      for (const entry of bibleReadingPlan) {
+        const entryYear = entry.date.getFullYear();
+        const entryMonth = entry.date.getMonth();
+        if (!currentMonthPlan || entryMonth != currentMonthPlan.month) {
+          if (currentMonthPlan && currentYearPlan) {
+            currentYearPlan.monthlyReadings.push(currentMonthPlan);
+            totalNumberMonths += 1;
+          }
+          currentMonthPlan = {month: entryMonth, dailyReadings: []};
+        }
+        if (!currentYearPlan || entryYear != currentYearPlan.year) {
+          if (currentYearPlan) {
+            segmentedPlan.push(currentYearPlan);
+          }
+          currentYearPlan = {year: entryYear, monthlyReadings: []};
+        }
+        currentMonthPlan.dailyReadings.push(
+            {date: entry.date, reading: entry.reading});
+      }
+      currentYearPlan.monthlyReadings.push(currentMonthPlan);
+      totalNumberMonths += 1;
+      segmentedPlan.push(currentYearPlan);
+
+      const totalNumberColumns =
+          Math.max(
+            Math.min(
+                Math.floor(totalNumberMonths / 2),
+                Math.floor($(window).width() / READING_PLAN_COLUMN_SIZE)),
+            1);
+      const readingPlanColumns =
+          [...Array(totalNumberColumns).keys()].map((unused) => {
+            const column = createElement('div', ['bibleReadingPlanColumn']);
+            $('.bibleReadingPlanContainer').append(column);
+            return column;
+          });
+      
+      let currentMonthCount = 0;
+      let currentColumnIndex = 0;
+      let currentColumn;
+      const monthsPerColumn = Math.ceil(totalNumberMonths / totalNumberColumns);
+      const updateColumn = () => {
+        currentColumnIndex =
+            Math.floor(currentMonthCount / monthsPerColumn);
+        currentColumn = readingPlanColumns[currentColumnIndex];
+        console.log(currentColumn);
+      };
+      updateColumn();
+      for (const yearPlan of segmentedPlan) {
+        if (segmentedPlan.length > 1) {
+          const yearHeader = createElement('div', ['readingPlanYearHeader']);
+          yearHeader.innerHTML = yearPlan.year;
+          currentColumn.append(yearHeader);
+        }
+        for (const monthPlan of yearPlan.monthlyReadings) {
+          currentColumn.append(createReadingPlanMonth(monthPlan));
+          currentMonthCount += 1;
+          updateColumn();
+        }
+      }
+    }
+
+    function changeDate(inputId, newDateInput=null) {
+      if (newDateInput) {
+        $(inputId).val(newDateInput);
+      }
+      const newDate = new Date($(inputId).val());
+      if (inputId === '#startingDate') {
+        startingDate = newDate;
+      } else {
+        endingDate = newDate;
+      }
+      updateDateSuggestionButtons();
+      checkDateValidity();
+      updatePlanDurationText();
+    }
+
+    function suggestDate(buttonId) {
+      const newDateInput = getDateInputVal(getSuggestedDate(buttonId));
+      changeDate(
+        buttonId === '#suggestStartingDateButton' ? 
+            '#startingDate' : '#endingDate',
+        newDateInput);
+    }
+
+    function submitForm() {
+      populatePlanView();
+      $('#readingPlanView').css('display', 'block');
+      $('#mainView').css('display', 'none');
+    }
+
+    function testPlanView() {
+      toggleAllCheckboxes(true);
+      suggestDate('#suggestEndingDateButton');
+      submitForm();
     }
 
     $('.checkboxLabel').click(function(event) {
@@ -423,46 +673,17 @@
     $('.bookCheckbox input').change(function(event) {
       onCheckboxToggled();
     });
-    $('#checkAllButton').click(function(event) {
-      toggleAllCheckboxes(true);
-      onCheckboxToggled();
-    });
-    $('#uncheckAllButton').click(function(event) {
-      toggleAllCheckboxes(false);
-      onCheckboxToggled();
-    });
+    $('#checkAllButton').click(() => toggleAllCheckboxes(true));
+    $('#uncheckAllButton').click(() => toggleAllCheckboxes(false));
 
-    $('#startingDate').change(function(event) {
-      startingDate = $(this).val() ? new Date($(this).val()) : null;
-      updateDateSuggestionButtons();
-      checkDateValidity();
-      updatePlanDurationText();
-    });
-    $('#endingDate').change(function(event) {
-      endingDate = $(this).val() ? new Date($(this).val()) : null;
-      updateDateSuggestionButtons();
-      checkDateValidity();
-      updatePlanDurationText();
-    });
-    $('#suggestStartingDateButton').click(function(event) {
-      const newStartingDate = getDateInputVal(getSuggestedStartingDate());
-      startingDate = new Date(newStartingDate); // Need to truncate the value here.
-      $('#startingDate').val(newStartingDate);
-      checkDateValidity();
-      updatePlanDurationText();
-    });
-    $('#suggestEndingDateButton').click(function(event) {
-      const newEndingDate = getDateInputVal(getSuggestedEndingDate());
-      endingDate = new Date(newEndingDate); // Need to truncate the value here.
-      $('#endingDate').val(newEndingDate);
-      checkDateValidity();
-      updatePlanDurationText();
-    });
+    $('#startingDate').change(() => changeDate('#startingDate'));
+    $('#endingDate').change(() => changeDate('#endingDate'));
+    $('#suggestStartingDateButton').click(
+        () => suggestDate('#suggestStartingDateButton'));
+    $('#suggestEndingDateButton').click(
+        () => suggestDate('#suggestEndingDateButton'));
 
-    $('#submitButton').click(function(event) {
-      $('#readingPlanView').css('display', 'block');
-      $('#mainView').css('display', 'none');
-    });
+    $('#submitButton').click(() => submitForm());
 
     $('#modifyButton').click(function(event) {
       $('#mainView').css('display', 'block');

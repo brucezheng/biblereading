@@ -230,7 +230,7 @@ class ScriptureSectionList {
     if (this.sectionList.length === 0) {
       return '';
     }
-    return this.sectionList.map(section => section.toString()).join(', ');
+    return this.sectionList.map(section => section.toString()).join('<br>');
   }
 }
 
