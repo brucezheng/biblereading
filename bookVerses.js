@@ -189,7 +189,7 @@ class ScriptureSection {
   }
 }
 
-class ScriptureSectionList {
+class ScriptureReading {
   constructor(sections) {
     this.sectionList = [];
     for (const section of sections) {
@@ -330,7 +330,7 @@ function getScriptureSegments(selectedBooks, numSegments) {
 	const sections = getScriptureSections(selectedBooks);
 	if (sections.length < numSegments) {
 		// TODO: Make sparse segments.
-		return sections.map(section => new ScriptureSectionList([section]));
+		return sections.map(section => new ScriptureReading([section]));
 	}
 	const totalVerses = getNumberVerses(selectedBooks);
 	const totalSections = sections.length;
@@ -362,7 +362,7 @@ function getScriptureSegments(selectedBooks, numSegments) {
 			cumulativeSections += 1;
 			sections.shift();
 		}
-		segments.push(new ScriptureSectionList(currentSegment));
+		segments.push(new ScriptureReading(currentSegment));
 	}
 	return segments;
 }
