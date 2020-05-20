@@ -45,6 +45,6 @@ function getMonthDayString(date) {
       dateSuffix = 'rd';
       break;
   }
-  return `${monthAbbreviations[date.getMonth()]}` + 
-             ` ${date.getDate()}${dateSuffix}`;
+  return `${monthAbbreviations[date.getUTCMonth()]}` + 
+             ` ${date.getUTCDate()}${dateSuffix}`;
 }
