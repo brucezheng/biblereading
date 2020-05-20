@@ -30,7 +30,7 @@ const monthAbbreviations = [
 
 function getMonthDayString(date) {
   let dateSuffix = 'th';
-  switch (date.getDate()) {
+  switch (date.getUTCDate()) {
     case 1:
     case 21:
     case 31:
