@@ -138,6 +138,9 @@
     button {
       font-size: 11pt;
     }
+    #planSummaryText {
+      margin-bottom: 8px;
+    }
     .planHeader {
       border: 2px solid black;
       font-size: 24pt;
@@ -248,7 +251,7 @@
             </div>
           </div>
           <div id="numberVersesText" style="display: none;">
-            You need to read:
+            You need to read
             <span id="numberVersesCount" style="font-weight: bold;"></span>
             over
             <span id="numberChaptersCount" style="font-weight: bold;"></span>
@@ -263,7 +266,7 @@
           </div>
           <div id="dateErrorMessage" style="display: none;" class="errorMessage"></div>
           <div id="planDurationText" style="display: none;">
-            Your plan will take: <span id="planDurationDays" style="font-weight: bold;"></span>
+            Your plan will take <span id="planDurationDays" style="font-weight: bold;"></span>
           </div>
           <button id="suggestStartingDateButton"
                   style="display: none;"
@@ -283,6 +286,13 @@
         </div>
         <div class="stepHeader">4</div>
         <div class="stepContent">
+        <div id="planSummaryText" style="display: none;">
+          You're going to read an average of 
+          <span id="summaryDailyVerses" style="font-weight: bold;"></span>
+          daily (which should take about 
+          <span id="summaryDailyTime" style="font-weight: bold;"></span>
+          )
+        </div>
         <button id="submitButton" class="ui-button ui-corner-all">Get your plan</button>
         </div>
       </div>
@@ -300,6 +310,9 @@
   </div>
   <script>
     const READING_PLAN_COLUMN_SIZE = 300;
+    const AVERAGE_WORDS_PER_VERSE = 25;
+    const AVERAGE_MINUTES_PER_VERSE_MIN = AVERAGE_WORDS_PER_VERSE / 300;
+    const AVERAGE_MINUTES_PER_VERSE_MAX = AVERAGE_WORDS_PER_VERSE / 100;
 
     const today = getDateInputVal(new Date())
     const suggestedVersesPerDay = (totalNumberVerses / 365.0);
@@ -509,7 +522,24 @@
       }
     }
 
+    function updatePlanSummaryText() {
+      if (!areDatesValid() || numberVerses === 0) {
+        $('#planSummaryText').css('display', 'none');
+        return;
+      }
+      const planDuration = getDateDays(new Date(endingDate - startingDate)) + 1;
+      const dailyVerses = numberVerses / planDuration;
+      const dailyReadingTimeMin = dailyVerses * AVERAGE_MINUTES_PER_VERSE_MIN;
+      const dailyReadingTimeMax = dailyVerses * AVERAGE_MINUTES_PER_VERSE_MAX;
+        $('#planSummaryText').css('display', 'block');
+      $('#summaryDailyVerses').html(
+          `${dailyVerses.toFixed(0)} verses`);
+      $('#summaryDailyTime').html(
+          `${dailyReadingTimeMin.toFixed(0)}-${dailyReadingTimeMax.toFixed(0)} minutes`);
+    }
+
     function updateSubmitButtonEnabled() {
+      updatePlanSummaryText();
       updateBibleReadingPlan();
       $('#submitButton').button(
           'option', 'disabled', bibleReadingPlan.length === 0);
