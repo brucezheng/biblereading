@@ -19,7 +19,7 @@ In terms of JS frameworks, the only libraries used are jQuery and jQuery UI.
 Roadmap
 * ~~P0 - Reading summary text~~
 * ~~P0 - Generating bible reading plan view~~
-* P0 - "Print" button on reading plan view
+* ~~P0 - "Print" button on reading plan view~~
 * P0 - "Read psalms in parallel" extra option
 * P0 - "Read psalms daily" extra option
 * P1 - Refactor code to be a little more sane

@@ -99,16 +99,19 @@
         display: none;
       }
       .selectionHeader {
-        margin: 12px 0 4px 24px;
+        margin: 12px 0 4px 14px;
       }
       .bookSelection {
         max-height: 400px;
       }
       .bookCheckbox {
-        margin-left: 24px;
+        margin-left: 16px;
       }
     }
     @media (max-width: 450px) {
+      h1 {
+        font-size: 21pt;
+      }
       .mainContentContainer {
         padding: 16px;
       }
@@ -151,38 +154,53 @@
       width: 72px;
     }
     .bibleReadingPlanContainer{
-      display: flex;
-      flex-direction: row;
-      justify-content: center;
       width: 100%;
     }
-    .bibleReadingPlanColumn{
+    .printedReadingPlanContainer{
+      display: none;
+      margin-top: 40px;
+      width: 100%;
+    }
+    .hiddenForMeasurement {
+      left: -300px;
+      visibility: hidden
+    }
+    .readingPlanPage {
+      align-content: center;
       display: flex;
       flex-direction: column;
-      padding: 24px;
+      flex-wrap: wrap;
+      margin-bottom: 48px;
+    }
+    .readingPlanYearHeader.startOfColumn {
+      padding: 0;
+      margin-top: -4px;
     }
     .readingPlanYearHeader {
       font-size: 28pt;
       font-weight: bold;
-      margin: 0 0 4px 12px;
+      padding: 5px 0 0;
+      width: 250px;
     }
     .readingPlanMonth {
-      display: flex;
-      flex-direction: column;
-      margin: 12px;
+      margin: 12px 0;
     }
     .readingPlanMonthHeader {
       font-size: 16pt;
       font-weight: bold;
       text-decoration: underline;
-      margin-bottom: 8px;
+      padding: 8px 0;
+      width: 250px;
+    }
+    .readingPlanMonthHeader.startOfColumn {
+      padding: 0 0 8px;
     }
     .readingPlanEntry {
       display: flex;
       flex-direction: row;
       font-size: 12pt;
-      margin-bottom: 2px;
-      width: 225px;
+      padding-bottom: 2px;
+      width: 250px;
     }
     .readingPlanEntryDate {
       font-weight: bold;
@@ -197,9 +215,21 @@
     .planActionButtonContainer button {
       margin: 24px;
     }
+    @media print {
+      .planActionButtonContainer {
+        display: none;
+      }
+      .bibleReadingPlanContainer {
+        display: none;
+      }
+      .printedReadingPlanContainer {
+        display: block;
+      }
+    }
   </style>
 </head>
 <body>
+  <div id="measuringSpace"></div>
   <div id="mainView">
     <div style="width: 100%; text-align: center; padding-top: 12px;">
       <h1>
@@ -307,12 +337,21 @@
       <button id="printButton" class="ui-button ui-corner-all">Print</button>
     </div>
     <div class="bibleReadingPlanContainer"></div>
+    <div class="printedReadingPlanContainer"></div>
   </div>
   <script>
     const READING_PLAN_COLUMN_SIZE = 300;
     const AVERAGE_WORDS_PER_VERSE = 25;
     const AVERAGE_MINUTES_PER_VERSE_MIN = AVERAGE_WORDS_PER_VERSE / 300;
     const AVERAGE_MINUTES_PER_VERSE_MAX = AVERAGE_WORDS_PER_VERSE / 100;
+    const GET_ESTIMATED_ELEMENT_HEIGHT = true;
+
+    const READING_PLAN_YEAR_HEADER_HEIGHT = 48;
+    const READING_PLAN_MONTH_HEADER_HEIGHT = 40;
+    const READING_PLAN_YEAR_HEADER_START_OF_COLUMN_HEIGHT = 39;
+    const READING_PLAN_MONTH_HEADER_START_OF_COLUMN_HEIGHT = 32;
+    const READING_PLAN_ENTRY_LINE_HEIGHT = 18;
+    const READING_PLAN_ENTRY_PADDING = 2;
 
     const today = getDateInputVal(new Date())
     const suggestedVersesPerDay = (totalNumberVerses / 365.0);
@@ -363,20 +402,25 @@
       const result = createElement('div', ['readingPlanEntry']);
       const monthDay = createElement('div', ['readingPlanEntryDate']);
       monthDay.innerHTML = getMonthDayString(entry.date) + ': ';
-      const reading = createElement('div');
+      const reading = createElement('div', ['readingPlanEntryReading']);
       reading.innerHTML = entry.reading;
       result.append(monthDay);
       result.append(reading);
       return result;
     }
 
-    function createReadingPlanMonth(monthPlan) {
-      const result = createElement('div', ['readingPlanMonth']);
+    function createReadingPlanMonthElements(monthPlan, yearHeader=null) {
+      const result = [];
+      if (yearHeader) {
+        const yearHeaderEl = createElement('div', ['readingPlanYearHeader']);
+        yearHeaderEl.innerHTML = yearHeader;
+        result.push(yearHeaderEl);
+      }
       const monthHeader = createElement('div', ['readingPlanMonthHeader']);
       monthHeader.innerHTML = monthNames[monthPlan.month];
-      result.append(monthHeader);
+      result.push(monthHeader);
       for (const entry of monthPlan.dailyReadings) {
-        result.append(createReadingPlanEntry(entry));
+        result.push(createReadingPlanEntry(entry));
       }
       return result;
     }
@@ -531,11 +575,12 @@
       const dailyVerses = numberVerses / planDuration;
       const dailyReadingTimeMin = dailyVerses * AVERAGE_MINUTES_PER_VERSE_MIN;
       const dailyReadingTimeMax = dailyVerses * AVERAGE_MINUTES_PER_VERSE_MAX;
-        $('#planSummaryText').css('display', 'block');
+      $('#planSummaryText').css('display', 'block');
       $('#summaryDailyVerses').html(
           `${dailyVerses.toFixed(0)} verses`);
       $('#summaryDailyTime').html(
-          `${dailyReadingTimeMin.toFixed(0)}-${dailyReadingTimeMax.toFixed(0)} minutes`);
+          `${dailyReadingTimeMin.toFixed(0)}` +
+              `-${dailyReadingTimeMax.toFixed(0)} minutes`);
     }
 
     function updateSubmitButtonEnabled() {
@@ -546,7 +591,6 @@
     }
 
     function populatePlanView() {
-      $('.bibleReadingPlanContainer').empty();
 
       const segmentedPlan = [];
       let currentYearPlan;
@@ -554,7 +598,7 @@
       let totalNumberMonths = 0;
       for (const entry of bibleReadingPlan) {
         const entryYear = entry.date.getFullYear();
-        const entryMonth = entry.date.getMonth();
+        const entryMonth = entry.date.getUTCMonth();
         if (!currentMonthPlan || entryMonth != currentMonthPlan.month) {
           if (currentMonthPlan && currentYearPlan) {
             currentYearPlan.monthlyReadings.push(currentMonthPlan);
@@ -575,43 +619,187 @@
       totalNumberMonths += 1;
       segmentedPlan.push(currentYearPlan);
 
-      const totalNumberColumns =
-          Math.max(
-            Math.min(
-                Math.floor(totalNumberMonths / 2),
-                Math.floor($(window).width() / READING_PLAN_COLUMN_SIZE)),
-            1);
-      const readingPlanColumns =
-          [...Array(totalNumberColumns).keys()].map((unused) => {
-            const column = createElement('div', ['bibleReadingPlanColumn']);
-            $('.bibleReadingPlanContainer').append(column);
-            return column;
-          });
-      
-      let currentMonthCount = 0;
-      let currentColumnIndex = 0;
-      let currentColumn;
-      const monthsPerColumn = Math.ceil(totalNumberMonths / totalNumberColumns);
-      const updateColumn = () => {
-        currentColumnIndex =
-            Math.floor(currentMonthCount / monthsPerColumn);
-        currentColumn = readingPlanColumns[currentColumnIndex];
-        console.log(currentColumn);
-      };
-      updateColumn();
+      const renderedPlanElements = [];
       for (const yearPlan of segmentedPlan) {
-        if (segmentedPlan.length > 1) {
-          const yearHeader = createElement('div', ['readingPlanYearHeader']);
-          yearHeader.innerHTML = yearPlan.year;
-          currentColumn.append(yearHeader);
-        }
+        let firstMonth = true;
         for (const monthPlan of yearPlan.monthlyReadings) {
-          currentColumn.append(createReadingPlanMonth(monthPlan));
-          currentMonthCount += 1;
-          updateColumn();
+          let yearHeader = null;
+          if (segmentedPlan.length > 1 && firstMonth) {
+            firstMonth = false;
+            yearHeader = yearPlan.year;
+          }
+          const renderedPlan =
+              createReadingPlanMonthElements(monthPlan, yearHeader);
+          renderedPlanElements.push(renderedPlan);
         }
       }
+
+      const viewPageHeight = Math.max(500, window.innerHeight - 175);
+      const viewNumberColumns =
+          Math.max(1, Math.floor(window.innerWidth / 300));
+
+      const renderedPlanElementsCopy =
+          renderedPlanElements.map(
+              renderedPlan => renderedPlan.map(
+                  element => element.cloneNode(true)));
+
+      $('.bibleReadingPlanContainer').empty();
+      new ReadingPlanPages(
+              renderedPlanElements, viewPageHeight, viewNumberColumns)
+              .getPages()
+              .forEach(
+                  planPage =>
+                      $('.bibleReadingPlanContainer').append(planPage));
+      window.scrollTo(0, 0);
+
+      $('.printedReadingPlanContainer').empty();
+      new ReadingPlanPages(
+              renderedPlanElementsCopy, 935, 3, /* firstPageHeight */ 875)
+              .getPages()
+              .forEach(
+                  planPage =>
+                      $('.printedReadingPlanContainer').append(planPage));
     }
+
+    class ReadingPlanPages {
+      /**
+       * @param {!Array<!Array<!Element>>} renderedMonthPlans
+       * @param {number} pageHeight
+       * @param {number} numberPageColumns
+       */
+      constructor(
+          renderedMonthPlans,
+          pageHeight,
+          numberPageColumns,
+          firstPageHeight=null) {
+        this.pageHeight = pageHeight;
+        this.firstPageHeight = firstPageHeight || pageHeight;
+        this.numberPageColumns = numberPageColumns;
+        this.pages = [];
+        this.pageColumnHeights = [];
+
+        this.addPage_();
+        renderedMonthPlans.forEach(monthPlan => this.addMonthPlan_(monthPlan));
+      }
+
+      getPages() {
+        return this.pages;
+      }
+
+      addMonthPlan_(monthPlan) {
+        let pageIndex = this.pages.length - 1;
+        if (!this.canAddMonthPlanToPage_(pageIndex, monthPlan)) {
+          this.addPage_();
+          pageIndex += 1;
+        }
+        this.addMonthPlanToPage_(pageIndex, monthPlan);
+      }
+
+      addPage_() {
+        const newPage = createElement('div', ['readingPlanPage']);
+        this.pages.push(newPage);
+        const newPageIndex = this.pages.length - 1;
+        $(newPage).css('height', `${this.getPageHeight_(newPageIndex)}px`);
+        const newPageHeights = [];
+        for (let i = 0; i < this.numberPageColumns; ++i) {
+          newPageHeights.push(0);
+        }
+        this.pageColumnHeights.push(newPageHeights);
+      }
+
+      /**
+       * Determines whether or not adding the month plan to the currentPage
+       * will cause the page to overflow.
+       */
+      canAddMonthPlanToPage_(pageIndex, monthPlan) {
+        const columnHeights = this.pageColumnHeights[pageIndex].map(x => x);
+        let currentColumn = this.getCurrentColumnIndex_(columnHeights);
+
+        for (const element of monthPlan) {
+          if (columnHeights[currentColumn] == 0) {
+            element.classList.add('startOfColumn');
+          }
+          if (!this.canAddElementToColumn_(
+                  element, pageIndex, columnHeights[currentColumn])) {
+            currentColumn += 1;
+            element.classList.add('startOfColumn');
+          }
+          const elementHeight = getElementHeight(element);
+          element.classList.remove('startOfColumn');
+          if (currentColumn + 1 > this.numberPageColumns) {
+            return false;
+          }
+          columnHeights[currentColumn] += elementHeight;
+        }
+        return true;
+      }
+
+      /**
+       * Adds the month plan elements to the last page element. Assumes that
+       * doing so will not cause the page to overflow.
+       */
+      addMonthPlanToPage_(pageIndex, monthPlan) {
+        const page = this.pages[pageIndex];
+        const columnHeights = this.pageColumnHeights[pageIndex];
+        let currentColumn =
+            this.getCurrentColumnIndex_(columnHeights);
+
+        for (const element of monthPlan) {
+          const currentColumnHeight = columnHeights[currentColumn];
+          if (currentColumnHeight === 0) {
+            element.classList.add('startOfColumn');
+          }
+          if (!this.canAddElementToColumn_(
+                  element, pageIndex, currentColumnHeight)) {
+            this.addSpacerToPage_(pageIndex, currentColumn);
+            currentColumn += 1;
+            element.classList.add('startOfColumn');
+          }
+          columnHeights[currentColumn] += getElementHeight(element);
+          page.append(element);
+        }
+        return true;
+      }
+
+      canAddElementToColumn_(element, pageIndex, columnHeight) {
+        const elementHeight = getElementHeight(element);
+        const distanceToBottom =
+            this.getPageHeight_(pageIndex) - columnHeight;
+        const isYearHeader =
+            element.classList.contains('readingPlanYearHeader');
+        const isMonthHeader =
+            element.classList.contains('readingPlanMonthHeader');
+        return distanceToBottom >= elementHeight &&
+                   (!isYearHeader || distanceToBottom >= 300) &&
+                       (!isMonthHeader || distanceToBottom >= 100);
+      }
+
+      addSpacerToPage_(pageIndex, columnIndex) {
+        const distanceToBottom =
+            this.getPageHeight_(pageIndex) -
+                this.pageColumnHeights[pageIndex][columnIndex];
+        const spacerElement = createElement('div');
+        $(spacerElement).css('height', `${distanceToBottom}px`);
+        $(spacerElement).css('width', '250px');
+        this.pages[pageIndex].append(spacerElement);
+      }
+
+      getPageHeight_(pageIndex) {
+        return pageIndex === 0 ? this.firstPageHeight : this.pageHeight;
+      }
+
+      getCurrentColumnIndex_(pageColumnHeights) {
+        let index = 0;
+        for(let currentIndex = 0;
+            currentIndex < pageColumnHeights.length;
+            currentIndex += 1) {
+          if (pageColumnHeights[currentIndex] > 0) {
+            index = currentIndex;
+          }
+        }
+        return index;
+      }
+    };
 
     function changeDate(inputId, newDateInput=null) {
       if (newDateInput) {
@@ -648,6 +836,32 @@
       submitForm();
     }
 
+    function getElementHeight(element) {
+      if (GET_ESTIMATED_ELEMENT_HEIGHT) {
+        if (element.classList.contains('readingPlanYearHeader')) {
+          return element.classList.contains('startOfColumn') ?
+                     READING_PLAN_YEAR_HEADER_START_OF_COLUMN_HEIGHT :
+                     READING_PLAN_YEAR_HEADER_HEIGHT;
+        }
+        if (element.classList.contains('readingPlanMonthHeader')) {
+          return element.classList.contains('startOfColumn') ?
+                     READING_PLAN_MONTH_HEADER_START_OF_COLUMN_HEIGHT :
+                     READING_PLAN_MONTH_HEADER_HEIGHT;
+        }
+        const numberTextLines =
+            ($(element).find('.readingPlanEntryReading').html()
+                 .match(new RegExp('<br>', 'g')) || []).length + 1;
+        return numberTextLines * READING_PLAN_ENTRY_LINE_HEIGHT
+                   + READING_PLAN_ENTRY_PADDING;
+      }
+      element.classList.add('hiddenForMeasurement');
+      $('#measuringSpace').append(element);
+      const height = element.scrollHeight;
+      element.parentElement.removeChild(element);
+      element.classList.remove('hiddenForMeasurement');
+      return height;
+    }
+
     $('.checkboxLabel').click(function(event) {
       toggleCheckbox($(this).parent().find('input'));
       onCheckboxToggled();
@@ -673,6 +887,10 @@
       $([document.documentElement, document.body]).animate({
         scrollTop: $(".stepHeader").offset().top - 24
       }, 150, 'linear');
+    });
+
+    $('#printButton').click(function(event) {
+      window.print();
     });
   </script>
 </body>
