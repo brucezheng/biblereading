@@ -124,6 +124,10 @@ class ScriptureSection {
     }
   }
 
+  isEmpty() {
+    return this.getNumberChapters() === 0;
+  }
+
   getNumberVerses() {
     return this.numberVerses;
   }
@@ -214,6 +218,10 @@ class ScriptureReading {
 	    		newSection.endingChapter,
 	    		newSection.endingVerse));
     return this;
+  }
+
+  isEmpty() {
+    return this.getNumberChapters() === 0;
   }
 
   getNumberVerses() {
@@ -326,11 +334,34 @@ function getScriptureSections(selectedBooks) {
 					  	   (sections, newSections) => sections.concat(newSections), []);
 }
 
+function addSpacingToSegments(filledSegments, numberEmptySpaces) {
+  const numberFilledSpaces = filledSegments.length;
+  const totalSpaces = numberEmptySpaces + numberFilledSpaces;
+  let currentFilledCount = 0;
+  const result = [];
+  for (let i = 0; i < totalSpaces; ++i) {
+    const expectedFilledSpaces = 
+          Math.ceil((i + 1) * (numberFilledSpaces / totalSpaces));
+    const shouldAppendFilled = currentFilledCount < expectedFilledSpaces;
+    if (shouldAppendFilled) {
+      result.push(filledSegments[currentFilledCount]);
+      currentFilledCount += 1;
+    } else {
+      result.push(null);
+    }
+  }
+  return result;
+}
+
 function getScriptureSegments(selectedBooks, numSegments) {
 	const sections = getScriptureSections(selectedBooks);
 	if (sections.length < numSegments) {
-		// TODO: Make sparse segments.
-		return sections.map(section => new ScriptureReading([section]));
+    const numberEmptySpaces =
+        numSegments - sections.length;
+    const filledSegments =
+        sections.map(section => new ScriptureReading([section]));
+    console.log('numberEmptySpaces', numberEmptySpaces);
+    return addSpacingToSegments(filledSegments, numberEmptySpaces);
 	}
 	const totalVerses = getNumberVerses(selectedBooks);
 	const totalSections = sections.length;
@@ -382,16 +413,23 @@ function getDateRange(startingDate, endingDate) {
 }
 
 function getBibleReadingPlan(startingDate, endingDate, selectedBooks) {
-	const dateRange = getDateRange(startingDate, endingDate);
-	const scriptureSegments =
-			getScriptureSegments(selectedBooks, dateRange.length);
-	return dateRange.map((date, index) => {
-		sectionList = scriptureSegments[index];
-		return {
-			date,
-			reading: sectionList.toString(),
-			numVerses: sectionList.getNumberVerses(),
-			numChapters: sectionList.getNumberChapters(),
-		};
-	});
+  const dateRange = getDateRange(startingDate, endingDate);
+  const scriptureSegments =
+      getScriptureSegments(selectedBooks, dateRange.length);
+  const result =
+      dateRange
+          .map((date, index) => {
+            if (!scriptureSegments[index]) {
+              return null;
+            }
+            const sectionList = scriptureSegments[index];
+            return {
+              date,
+              reading: sectionList.toString(),
+              numVerses: sectionList.getNumberVerses(),
+              numChapters: sectionList.getNumberChapters(),
+            };
+          })
+          .filter(entry => !!entry);
+  return result;
 }
