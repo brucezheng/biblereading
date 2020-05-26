@@ -128,6 +128,26 @@ class ScriptureSection {
     return this.getNumberChapters() === 0;
   }
 
+  getBook() {
+    return this.book;
+  }
+
+  getStartingChapter() {
+    return this.startingChapter;
+  }
+
+  getStartingVerse() {
+    return this.startingVerse;
+  }
+
+  getEndingChapter() {
+    return this.endingChapter;
+  }
+
+  getEndingVerse() {
+    return this.endingVerse;
+  }
+
   getNumberVerses() {
     return this.numberVerses;
   }
@@ -193,6 +213,15 @@ class ScriptureSection {
   }
 }
 
+function copySection(section) {
+  return new ScriptureSection(
+      section.getBook(),
+      section.getStartingChapter(),
+      section.getStartingVerse(),
+      section.getEndingChapter(),
+      section.getEndingVerse());
+}
+
 class ScriptureReading {
   constructor(sections) {
     this.sectionList = [];
@@ -210,18 +239,16 @@ class ScriptureReading {
         return this;
       }
     }
-    this.sectionList.push(
-	    	new ScriptureSection(
-	    		newSection.book,
-	    		newSection.startingChapter,
-	    		newSection.startingVerse,
-	    		newSection.endingChapter,
-	    		newSection.endingVerse));
+    this.sectionList.push(copySection(newSection));
     return this;
   }
 
   isEmpty() {
     return this.getNumberChapters() === 0;
+  }
+
+  getSectionList() {
+    return this.sectionList.map(copySection);
   }
 
   getNumberVerses() {
@@ -250,6 +277,20 @@ const psalm119AcrosticSections =
           /* startingVerse= */ k * 8 + 1, 
           /* endingChapter= */ 119, 
           /* endingVerse= */ k * 8 + 8));
+
+const psalm119DailySections =
+  [[0, 4], [4, 8], [8, 12], [12, 16], [16, 19], [19, 22]]
+      .map(indices => {
+        const startingVerse = indices[0] * 8 + 1;
+        const endingVerse = indices[1] * 8;
+        const chapter = 119;
+        return new ScriptureSection(
+            'Psalms',
+            /* startingChapter= */ 119, 
+            startingVerse, 
+            /* endingChapter= */ 119, 
+            endingVerse);
+      })
 
 const scriptureSectionRegex =
     new RegExp('([A-Za-z]+) ([0-9]+)(:([0-9])+)?(-([0-9]+)(:([0-9])+)?)?');
@@ -303,9 +344,11 @@ function parseScriptureSection(sectionString) {
     /* endingVerse= */ startingVerse);
 }
 
-function getScriptureSectionsFromBookChapter(book, chapter, numVerses) {
+function getScriptureSectionsFromBookChapter(
+      book, chapter, numVerses, psalmsOnly=false) {
 	if (book === 'Psalms' && chapter === 119) {
-		return [...psalm119AcrosticSections];
+		return psalmsOnly ? 
+        [...psalm119DailySections] : [...psalm119AcrosticSections];
 	}
   return [
 	  new ScriptureSection(
@@ -317,19 +360,21 @@ function getScriptureSectionsFromBookChapter(book, chapter, numVerses) {
   ];
 }
 
-function getScriptureSectionsFromBookInfo(bookInfo) {
+function getScriptureSectionsFromBookInfo(bookInfo, psalmsOnly=false) {
   return bookInfo[2]
   		.map((numVerses, index) => 
       		     getScriptureSectionsFromBookChapter(
-      		         bookInfo[0], /* chapter= */ index + 1, numVerses))
+      		         bookInfo[0], /* chapter= */ index + 1, numVerses, psalmsOnly))
 		  .reduce(
 		  	(sections, newSections) => sections.concat(newSections), []);
 }
 
 function getScriptureSections(selectedBooks) {
+  const psalmsOnly = selectedBooks.size === 1 && selectedBooks.has('Psalms');
   return bookVerses
              .filter(bookInfo => selectedBooks.has(bookInfo[0]))
-             .map(getScriptureSectionsFromBookInfo)
+             .map(bookInfo => 
+                  getScriptureSectionsFromBookInfo(bookInfo, psalmsOnly))
 					   .reduce(
 					  	   (sections, newSections) => sections.concat(newSections), []);
 }
@@ -353,14 +398,18 @@ function addSpacingToSegments(filledSegments, numberEmptySpaces) {
   return result;
 }
 
-function getScriptureSegments(selectedBooks, numSegments) {
+/**
+ * @param {!Set<string>} selectedBooks
+ * @param {number} numSegments
+ * @return {!Array<!ScriptureReading>}
+ */
+function getScriptureReadings(selectedBooks, numSegments) {
 	const sections = getScriptureSections(selectedBooks);
 	if (sections.length < numSegments) {
     const numberEmptySpaces =
         numSegments - sections.length;
     const filledSegments =
         sections.map(section => new ScriptureReading([section]));
-    console.log('numberEmptySpaces', numberEmptySpaces);
     return addSpacingToSegments(filledSegments, numberEmptySpaces);
 	}
 	const totalVerses = getNumberVerses(selectedBooks);
@@ -412,17 +461,61 @@ function getDateRange(startingDate, endingDate) {
   return dateRange;
 }
 
-function getBibleReadingPlan(startingDate, endingDate, selectedBooks) {
+/**
+ * @param {!Array<!ScriptureReading>}
+ * @param {!Array<!ScriptureReading>}
+ */
+function zipReadings(left, right) {
+  const result = [];
+  for (let i = 0; i < left.length; ++i) {
+    if (!left[i]) {
+      if (!right[i]) {
+        result.push(null);
+        continue;
+      }
+      result.push(new ScriptureReading(right[i].getSectionList()));
+    }
+    if (!right[i]) {
+      result.push(new ScriptureReading(left[i].getSectionList()));
+      continue;
+    }
+    const segment = new ScriptureReading(left[i].getSectionList());
+    for (const section of right[i].getSectionList()) {
+      segment.add(section);
+    }
+    result.push(segment);
+  }
+  return result;
+}
+
+/**
+ * @param {!Date} startingDate
+ * @param {!Date} endingDate
+ * @param {!Set<string>} selectedBooks
+ * @param {?boolean} parallelPsalms
+ */
+function getBibleReadingPlan(
+      startingDate, endingDate, selectedBooks, parallelPsalms=false) {
   const dateRange = getDateRange(startingDate, endingDate);
-  const scriptureSegments =
-      getScriptureSegments(selectedBooks, dateRange.length);
+  const numberDays = dateRange.length;
+  const mainBooks = new Set(selectedBooks.keys());
+  if (parallelPsalms) {
+    mainBooks.delete('Psalms');
+  }
+  const mainReadings = getScriptureReadings(mainBooks, numberDays);
+  const scriptureReadings =
+      parallelPsalms ? 
+          zipReadings(
+              mainReadings,
+              getScriptureReadings(new Set(['Psalms']), numberDays)) :
+          mainReadings;
   const result =
       dateRange
           .map((date, index) => {
-            if (!scriptureSegments[index]) {
+            if (!scriptureReadings[index]) {
               return null;
             }
-            const sectionList = scriptureSegments[index];
+            const sectionList = scriptureReadings[index];
             return {
               date,
               reading: sectionList.toString(),

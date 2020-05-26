@@ -8,6 +8,10 @@
   <script src="bookVerses.js"></script>
   <script src="dateUtils.js"></script>
   <style>
+    /* Main View */
+    button {
+      font-size: 11pt;
+    }
     .scriptureContainer {
       display: flex;
       flex-direction: row;
@@ -108,20 +112,6 @@
         margin-left: 16px;
       }
     }
-    @media (max-width: 450px) {
-      h1 {
-        font-size: 21pt;
-      }
-      .mainContentContainer {
-        padding: 16px;
-      }
-      .stepContent {
-        padding: 12px;
-      }
-      .bookSelection {
-        max-height: unset;
-      }
-    }
     .dateSuggestionButton {
       margin-top: 8px;
     }
@@ -138,11 +128,27 @@
       color: red;
       font-style: italic;
     }
-    button {
-      font-size: 11pt;
+    #extraStepsEmptyText {
+      color: #b3b3b3;
+      font-style: italic;
     }
     #planSummaryText {
       margin-bottom: 8px;
+    }
+    /* Reading Plan View */
+    @media (max-width: 450px) {
+      h1 {
+        font-size: 21pt;
+      }
+      .mainContentContainer {
+        padding: 16px;
+      }
+      .stepContent {
+        padding: 12px;
+      }
+      .bookSelection {
+        max-height: unset;
+      }
     }
     .planHeader {
       border: 2px solid black;
@@ -312,7 +318,11 @@
         <div class="stepHeader">3</div>
         <div class="stepContent">
         <div class="stepDescription">Select extra options</div>
-        <input type="checkbox">Psalms every day</input>
+        <span id="extraStepsEmptyText">No extra options available</span>
+        <div id="psalmsEveryDayCheckbox" style="display: none;">
+          <input type="checkbox" />
+          <span class="checkboxLabel">Psalms every day</span>
+        </div>
         </div>
         <div class="stepHeader">4</div>
         <div class="stepContent">
@@ -362,12 +372,17 @@
     let startingDate = new Date(today);
     let endingDate = null;
     let bibleReadingPlan = [];
+    let enableParallelPsalms = false;
 
-    oldTestamentBooks.forEach((name) => $('#oldTestamentSelection').append(createBookCheckbox(name)));
-    newTestamentBooks.forEach((name) => $('#newTestamentSelection').append(createBookCheckbox(name)));
-     $('.bookSelection').each(function() {
+    oldTestamentBooks.forEach((name) =>
+        $('#oldTestamentSelection').append(createBookCheckbox(name)));
+    newTestamentBooks.forEach((name) =>
+        $('#newTestamentSelection').append(createBookCheckbox(name)));
+    $('.bookSelection').each(function() {
       const lastChild = $(this).children().last();
-      const newWidth = lastChild.position().left - $(this).position().left + lastChild.outerWidth(true);
+      const newWidth =
+          lastChild.position().left - $(this).position().left +
+              lastChild.outerWidth(true);
       if (newWidth > $(this).outerWidth()) {
         $(this).width(newWidth);
       }
@@ -375,7 +390,7 @@
 
     $('#startingDate').val(today);
 
-     $('#submitButton').button({
+    $('#submitButton').button({
       disabled: true
     });
 
@@ -426,7 +441,8 @@
     }
 
     function toggleCheckbox(checkbox, state=null) {
-      checkbox.prop('checked', state !== null ? state : !checkbox.prop('checked'));
+      checkbox.prop(
+          'checked', state !== null ? state : !checkbox.prop('checked'));
     }
 
     function toggleAllCheckboxes(state=null) {
@@ -445,6 +461,7 @@
         }
       });
       updateNumberVersesText();
+      updateAvailableExtraOptions();
       updateSubmitButtonEnabled();
       updateDateSuggestionButtons();
     }
@@ -491,13 +508,32 @@
       return startingDate && endingDate && endingDate >= startingDate;
     }
 
+    function updateAvailableExtraOptions() {
+      const showParallelPsalms =
+          checkedBooks.has('Psalms') && checkedBooks.size > 1;
+      if (showParallelPsalms) {
+        $('#psalmsEveryDayCheckbox').show();
+        $('#extraStepsEmptyText').hide();
+      } else {
+        $('#psalmsEveryDayCheckbox').hide();
+        $('#extraStepsEmptyText').show();
+      }
+    }
+
+    function onPsalmsEveryDayToggled() {
+      enableParallelPsalms =
+          $('#psalmsEveryDayCheckbox input').prop('checked');
+      updateBibleReadingPlan();
+    }
+
     function updateBibleReadingPlan() {
       if (!areDatesValid() || checkedBooks.size === 0) {
         bibleReadingPlan = [];
         return;
       }
       bibleReadingPlan =
-          getBibleReadingPlan(startingDate, endingDate, checkedBooks);
+          getBibleReadingPlan(
+              startingDate, endingDate, checkedBooks, enableParallelPsalms);
     }
 
     function hideDateErrorMessage() {
@@ -591,7 +627,6 @@
     }
 
     function populatePlanView() {
-
       const segmentedPlan = [];
       let currentYearPlan;
       let currentMonthPlan;
@@ -862,7 +897,7 @@
       return height;
     }
 
-    $('.checkboxLabel').click(function(event) {
+    $('.bookCheckbox .checkboxLabel').click(function(event) {
       toggleCheckbox($(this).parent().find('input'));
       onCheckboxToggled();
     });
@@ -878,6 +913,15 @@
         () => suggestDate('#suggestStartingDateButton'));
     $('#suggestEndingDateButton').click(
         () => suggestDate('#suggestEndingDateButton'));
+
+    $('#psalmsEveryDayCheckbox .checkboxLabel').click(function(event) {
+      toggleCheckbox($(this).parent().find('input'));
+      onPsalmsEveryDayToggled();
+    });
+
+    $('#psalmsEveryDayCheckbox input').change(function(event) {
+      onPsalmsEveryDayToggled();
+    });
 
     $('#submitButton').click(() => submitForm());
 
