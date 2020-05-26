@@ -228,6 +228,12 @@
       .bibleReadingPlanContainer {
         display: none;
       }
+      .readingPlanPage {
+        margin-left: 30px;
+      }
+      .readingPlanPage:last-of-type {
+        margin-bottom: 0;
+      }
       .printedReadingPlanContainer {
         display: block;
       }
@@ -689,7 +695,7 @@
 
       $('.printedReadingPlanContainer').empty();
       new ReadingPlanPages(
-              renderedPlanElementsCopy, 935, 3, /* firstPageHeight */ 875)
+              renderedPlanElementsCopy, 955, 3, /* firstPageHeight */ 875)
               .getPages()
               .forEach(
                   planPage =>
