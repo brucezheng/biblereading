@@ -461,6 +461,19 @@ function getDateRange(startingDate, endingDate) {
   return dateRange;
 }
 
+function getPsalmReadings(numberDays, dailyPsalms) {
+  if (!dailyPsalms) {
+    return getScriptureReadings(new Set(['Psalms']), numberDays);
+  }
+  const psalmsSections = getScriptureSections(new Set(['Psalms']));
+  const result = [];
+  for (let i = 0; i < numberDays; ++i) {
+    result.push(
+        new ScriptureReading([psalmsSections[i % psalmsSections.length]]));
+  }
+  return result;
+}
+
 /**
  * @param {!Array<!ScriptureReading>}
  * @param {!Array<!ScriptureReading>}
@@ -492,22 +505,22 @@ function zipReadings(left, right) {
  * @param {!Date} startingDate
  * @param {!Date} endingDate
  * @param {!Set<string>} selectedBooks
- * @param {?boolean} parallelPsalms
+ * @param {?} options
  */
 function getBibleReadingPlan(
-      startingDate, endingDate, selectedBooks, parallelPsalms=false) {
+    startingDate, endingDate, selectedBooks, options) {
   const dateRange = getDateRange(startingDate, endingDate);
   const numberDays = dateRange.length;
   const mainBooks = new Set(selectedBooks.keys());
-  if (parallelPsalms) {
+  if (options.parallelPsalms) {
     mainBooks.delete('Psalms');
   }
   const mainReadings = getScriptureReadings(mainBooks, numberDays);
   const scriptureReadings =
-      parallelPsalms ? 
+      options.parallelPsalms ? 
           zipReadings(
               mainReadings,
-              getScriptureReadings(new Set(['Psalms']), numberDays)) :
+              getPsalmReadings(numberDays, options.dailyPsalms)) :
           mainReadings;
   const result =
       dateRange
